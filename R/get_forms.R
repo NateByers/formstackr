@@ -12,9 +12,19 @@ get_forms <- function(key) {
 
   forms <- httr::content(forms)
 
-  x <- lapply(forms$forms, function(form) {
+  forms <- lapply(forms$forms, function(form) {
     # form <- forms$forms[[1]]
-    form <- lapply()
+    form <- lapply(form, function(item) {
+      if(is.null(item)) {
+        NA
+      } else {
+        item
+      }
+    })
     do.call(cbind.data.frame, form)
     })
+
+  forms <- dplyr::rbind_list(forms)
+
+  forms
 }
