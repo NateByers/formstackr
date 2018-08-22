@@ -4,13 +4,13 @@ get_fields <- function(key) {
   forms <- get_forms(key)
 
   fields <- lapply(forms$form_id, get_form_fields, key = key) %>%
-    dplyr::bind_rows(fields)
+    dplyr::bind_rows()
 
   fields
 }
 
 get_form_fields <- function(form_id, key) {
-
+  # form_id <- forms$form_id[1]
   url_address <- paste0("https://www.formstack.com/api/v2/form/",
                         form_id, "/field.json")
 
