@@ -1,9 +1,19 @@
-#' @export
-get_fields <- function(key) {
-  # key <- Sys.getenv("FORMSTACK_KEY_TEST")
-  forms <- get_forms(key)
+# key <- Sys.getenv("FORMSTACK_KEY")
+# form_ids <- get_forms(key) %>%
+#   dplyr::filter(folder == "79048") %>%
+#   dplyr::pull(form_id)
 
-  fields <- lapply(forms$form_id, get_form_fields, key = key) %>%
+
+
+#' @export
+get_fields <- function(key, form_ids = NA) {
+
+  if(is.na(form_ids[1])) {
+    forms <- get_forms(key)
+    form_ids <- forms$form_id
+  }
+
+  fields <- lapply(form_ids, get_form_fields, key = key) %>%
     dplyr::bind_rows()
 
   fields
