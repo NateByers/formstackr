@@ -4,10 +4,7 @@ get_forms <- function(key) {
 
   url_address <- "https://www.formstack.com/api/v2/form.json"
 
-  forms <- httr::GET(url_address,
-                     httr::add_headers(.headers = c("Accept" = "application/json",
-                                                    "Content-Type" = "application/json",
-                                                    "Authorization" = paste("Bearer", key))))
+  forms <- get_formstack_endpoint(url_address, key)
 
   forms <- httr::content(forms)
 
@@ -18,6 +15,15 @@ get_forms <- function(key) {
 
   forms
 }
+
+get_formstack_endpoint <- function(url, key, ...) {
+  httr::GET(url,
+            httr::add_headers(.headers = c("Accept" = "application/json",
+                                           "Content-Type" = "application/json",
+                                           "Authorization" = paste("Bearer", key))),
+            ...)
+}
+
 
 collapse_to_data_frame <- function(list_content) {
   list_content <- lapply(list_content, function(item) {

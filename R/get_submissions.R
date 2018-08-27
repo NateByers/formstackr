@@ -7,7 +7,8 @@
 
 
 #' @export
-get_submissions <- function(key, form_ids = NA, query_params = NA) {
+get_submissions <- function(key, form_ids = NA_character_,
+                            query_params = NA_character_) {
   # query_params <- list(min_time = "2018-08-01")
   if(is.na(form_ids[1])) {
     forms <- get_forms(key)
@@ -15,7 +16,7 @@ get_submissions <- function(key, form_ids = NA, query_params = NA) {
   }
 
   submission_ids <- lapply(form_ids, get_submission_ids, key = key,
-                           query_params)
+                           query_params = query_params)
 
   submission_ids <- submission_ids[!sapply(submission_ids, is.null)]
 
@@ -31,54 +32,64 @@ get_submissions <- function(key, form_ids = NA, query_params = NA) {
 }
 
 get_submission_ids <- function(form_id, key, query_params) {
-  # form_id <- form_ids[5]
-  print(form_id)
-  url_address <- paste0("https://www.formstack.com/api/v2/form/",
-                        form_id, "/submission.json")
+  # form_id <- form_ids[3]
 
-  if(is.na(query_params)) {
-    submissions <- httr::GET(url_address,
-                             httr::add_headers(.headers = c("Accept" = "application/json",
-                                                            "Content-Type" = "application/json",
-                                                            "Authorization" = paste("Bearer", key))))
-  } else {
-    submissions <- httr::GET(url_address,
-                             httr::add_headers(.headers = c("Accept" = "application/json",
-                                                            "Content-Type" = "application/json",
-                                                            "Authorization" = paste("Bearer", key))),
-                             query = query_params)
-  }
+  url_address_full <- paste0("https://www.formstack.com/api/v2/form/",
+                             form_id, "/submission.json")
 
-  submissions <- httr::content(submissions)
+  submission_ids_full <- extract_submission_ids(url_address_full,
+                                                key, query_params)
 
-  submissions <- lapply(submissions$submissions, collapse_to_data_frame)
+  submission_ids <- dplyr::data_frame(id = submission_ids_full,
+                                      partial = FALSE)
 
-  submissions <- dplyr::bind_rows(submissions)
+  url_address_partial <- paste0("https://www.formstack.com/api/v2/form/",
+                                form_id, "/partialsubmission.json")
 
-  if(nrow(submissions) == 0) {
-    return(NULL)
-  }
+  submission_ids_partial <- extract_submission_ids(url_address_partial,
+                                                key, query_params)
 
-  columns <- colnames(submissions)
-
-  submissions <- submissions %>%
-    dplyr::mutate(form_id = form_id) %>%
-    dplyr::select(!!c("form_id", columns)) %>%
-    dplyr::rename(submission_id = id)
-
-  submissions
 }
 
-get_submission_data <- function(submission_id, key) {
+
+extract_submission_ids <-  function(url, key, query_params) {
+
+  if(class(query_params) != "list") {
+    query_params <- list(per_page = 100)
+  }  else if(!"per_page" %in% names(query_params)) {
+      query_params$per_page <- 100
+  }
+
+  pages <- get_formstack_endpoint(url_address_full, key, query = query_params) %>%
+    httr::content()
+  pages <- pages$pages
+
+  ids <- lapply(1:pages, function(page, key, query_params) {
+    # page = 1
+    query_params$page <- page
+    ids <- get_formstack_endpoint(url_address_full, key, query = query_params) %>%
+      httr::content()
+    lapply(ids$submissions, function(submission) submission$id) %>%
+      unlist()
+  }, key = key, query_params = query_params)
+
+  unlist(ids)
+}
+
+
+get_submission_data <- function(submission_id, key, partial = FALSE) {
   # submission_id <- submission_ids$submission_id[1]
 
-  url_address <- paste0("https://www.formstack.com/api/v2/submission/",
-                        submission_id, ".json")
+  if(partial) {
+    partial <- "partial"
+  } else {
+    partial <- ""
+  }
 
-  submission_data <- httr::GET(url_address,
-                               httr::add_headers(.headers = c("Accept" = "application/json",
-                                                              "Content-Type" = "application/json",
-                                                              "Authorization" = paste("Bearer", key))))
+  url_address <- paste0("https://www.formstack.com/api/v2/",
+                        partial, "submission/", submission_id, ".json")
+
+  submission_data <- get_formstack_endpoint(url_address, key)
 
   submission_data <- httr::content(submission_data)$data
 

@@ -25,10 +25,7 @@ get_form_fields <- function(form_id, key) {
                         form_id, "/field.json")
 
 
-  fields <- httr::GET(url_address,
-                      httr::add_headers(.headers = c("Accept" = "application/json",
-                                                     "Content-Type" = "application/json",
-                                                     "Authorization" = paste("Bearer", key))))
+  fields <- get_formstack_endpoint(url_address, key)
 
   fields <- httr::content(fields)
 
